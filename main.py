@@ -474,7 +474,6 @@ def mostrar_menu_contextual(event):
 # ==========================================
 # 4. INTERFAZ GRÁFICA (GUI)
 # ==========================================
-ventana = tk.Tk()
 ventana.title("Sistema de Control de Megado de Motores Trifásicos")
 ventana.geometry("1180x750")
 
