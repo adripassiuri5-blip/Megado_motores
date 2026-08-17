@@ -474,8 +474,7 @@ def mostrar_menu_contextual(event):
 # ==========================================
 # 4. INTERFAZ GRÁFICA (GUI)
 # ==========================================
-ventana.title("Sistema de Control de Megado de Motores Trifásicos")
-ventana.geometry("1180x750")
+st.title("Sistema de Control de Megado de Motores Trifásicos")
 
 notebook = ttk.Notebook(ventana)
 notebook.pack(fill="both", expand=True, padx=10, pady=10)
