@@ -1,9 +1,6 @@
 import datetime
 import os
 import sqlite3
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-from tkcalendar import DateEntry
 
 # Importaciones para generación de PDF
 from reportlab.lib import colors
