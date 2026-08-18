@@ -2,7 +2,7 @@ import datetime
 import io
 import pandas as pd
 import streamlit as st
-from st_files_connection import FilesConnection
+import gspread
 
 # Configuración de la página web
 st.set_page_config(
@@ -17,23 +17,34 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-# Conexión con Google Sheets mediante FilesConnection
-conn = st.connection("gsheets", type=FilesConnection)
+# Conexión con Google Sheets
+@st.cache_resource
+def conectar_gsheets():
+    try:
+        gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+        sh = gc.open_by_url(st.secrets["connections"]["gsheets"]["spreadsheet"])
+        return sh
+    except Exception:
+        return None
+
+sh = conectar_gsheets()
 
 # ==========================================
 # 1. FUNCIONES DE LECTURA Y ESCRITURA
 # ==========================================
 def obtener_motores_df():
     try:
-        df = conn.read("gsheets/motores", input_format="csv", ttl=0)
-        return df.dropna(how="all")
+        ws = sh.worksheet("motores")
+        data = ws.get_all_records()
+        return pd.DataFrame(data)
     except Exception:
         return pd.DataFrame(columns=["id", "zona", "nombre", "ubicacion_tdf", "potencia_hp"])
 
 def obtener_mediciones_df():
     try:
-        df = conn.read("gsheets/mediciones", input_format="csv", ttl=0)
-        return df.dropna(how="all")
+        ws = sh.worksheet("mediciones")
+        data = ws.get_all_records()
+        return pd.DataFrame(data)
     except Exception:
         return pd.DataFrame(columns=["id", "motor_id", "fecha", "res_l1", "res_l2", "res_l3", "voltaje_prueba", "tecnico", "estado", "observacion"])
 
@@ -153,16 +164,13 @@ with pestaña1:
             if not zona or not nombre:
                 st.error("La Zona y el Nombre del motor son obligatorios.")
             else:
-                nuevo_id = int(df_motores["id"].max() + 1) if not df_motores.empty and pd.notna(df_motores["id"].max()) else 1
-                nueva_fila = pd.DataFrame([{
-                    "id": nuevo_id,
-                    "zona": zona,
-                    "nombre": nombre,
-                    "ubicacion_tdf": ubicacion_tdf,
-                    "potencia_hp": potencia if potencia > 0 else ""
-                }])
-                df_actualizado = pd.concat([df_motores, nueva_fila], ignore_index=True)
-                st.success(f"Motor '{nombre}' preparado para guardar.")
+                try:
+                    ws_m = sh.worksheet("motores")
+                    nuevo_id = int(df_motores["id"].max() + 1) if not df_motores.empty and pd.notna(df_motores["id"].max()) else 1
+                    ws_m.append_row([nuevo_id, zona, nombre, ubicacion_tdf, potencia if potencia > 0 else ""])
+                    st.success(f"Motor '{nombre}' guardado exitosamente.")
+                except Exception as e:
+                    st.error(f"Error al guardar: {e}")
 
     st.divider()
 
@@ -200,27 +208,18 @@ with pestaña1:
                 if res_l1 == 0 or res_l2 == 0 or res_l3 == 0 or voltaje_p == 0:
                     st.error("Por favor ingresa valores válidos de Resistencia y Voltaje.")
                 else:
-                    motor_id = dict_motores[motor_sel_label]
-                    hora_actual = datetime.datetime.now().strftime("%H:%M:%S")
-                    fecha_formateada = f"{fecha_sel.strftime('%Y-%m-%d')} {hora_actual}"
+                    try:
+                        ws_med = sh.worksheet("mediciones")
+                        motor_id = dict_motores[motor_sel_label]
+                        hora_actual = datetime.datetime.now().strftime("%H:%M:%S")
+                        fecha_formateada = f"{fecha_sel.strftime('%Y-%m-%d')} {hora_actual}"
 
-                    nuevo_med_id = int(df_mediciones["id"].max() + 1) if not df_mediciones.empty and pd.notna(df_mediciones["id"].max()) else 1
+                        nuevo_med_id = int(df_mediciones["id"].max() + 1) if not df_mediciones.empty and pd.notna(df_mediciones["id"].max()) else 1
 
-                    nueva_med = pd.DataFrame([{
-                        "id": nuevo_med_id,
-                        "motor_id": motor_id,
-                        "fecha": fecha_formateada,
-                        "res_l1": res_l1,
-                        "res_l2": res_l2,
-                        "res_l3": res_l3,
-                        "voltaje_prueba": voltaje_p,
-                        "tecnico": tecnico_sel,
-                        "estado": estado_sel,
-                        "observacion": observacion
-                    }])
-
-                    df_med_actualizado = pd.concat([df_mediciones, nueva_med], ignore_index=True)
-                    st.success(f"Medición guardada para el {fecha_sel}.")
+                        ws_med.append_row([nuevo_med_id, motor_id, fecha_formateada, res_l1, res_l2, res_l3, voltaje_p, tecnico_sel, estado_sel, observacion])
+                        st.success(f"Medición guardada para el {fecha_sel}.")
+                    except Exception as e:
+                        st.error(f"Error al guardar medición: {e}")
 
 # --- PESTAÑA 2: HISTORIAL Y FILTROS ---
 with pestaña2:
