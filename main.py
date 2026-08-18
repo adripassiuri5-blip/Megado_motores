@@ -4,18 +4,18 @@ import pandas as pd
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 
-# Importaciones para generación de PDF
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-
 # Configuración de la página web
 st.set_page_config(
     page_title="Control de Megado de Motores",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Importaciones para generación de PDF
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # Conexión con Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -118,7 +118,6 @@ def generar_pdf_bytes(df_mediciones, anio_filtro, semestre_filtro):
     buffer.seek(0)
     return buffer
 
-# Lista estática de técnicos
 LISTA_TECNICOS = [
     "ADRIANA PASSIURI",
     "ANTONY LIRA",
@@ -130,7 +129,7 @@ LISTA_TECNICOS = [
 # ==========================================
 # 2. INTERFAZ EN STREAMLIT
 # ==========================================
-st.title("⚡ Sistema de Control de Megado de Motores (Google Sheets)")
+st.title("⚡ Sistema de Control de Megado de Motores")
 
 pestaña1, pestaña2 = st.tabs(["📝 Registrar Datos", "📊 Historial de Mediciones"])
 
@@ -232,7 +231,6 @@ with pestaña2:
     st.header("Historial y Filtros para Auditoría")
 
     if not df_mediciones.empty and not df_motores.empty:
-        # Cruce de datos (JOIN)
         df_completo = df_mediciones.merge(df_motores, left_on="motor_id", right_on="id", suffixes=('', '_motor'))
         
         df_completo['fecha_dt'] = pd.to_datetime(df_completo['fecha'], errors='coerce')
@@ -272,4 +270,4 @@ with pestaña2:
             use_container_width=True
         )
     else:
-        st.info("Aún no hay mediciones o motores registrados en Google Sheets.")
+        st.info("Aún no hay mediciones o motores registrados.")
