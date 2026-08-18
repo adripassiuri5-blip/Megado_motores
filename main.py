@@ -164,7 +164,6 @@ with pestaña1:
                 df_actualizado = pd.concat([df_motores, nueva_fila], ignore_index=True)
                 conn.update(worksheet="motores", data=df_actualizado)
                 st.success(f"Motor '{nombre}' guardado en Google Sheets.")
-                st.rerun()
 
     st.divider()
 
@@ -224,7 +223,6 @@ with pestaña1:
                     df_med_actualizado = pd.concat([df_mediciones, nueva_med], ignore_index=True)
                     conn.update(worksheet="mediciones", data=df_med_actualizado)
                     st.success(f"Medición guardada en Google Sheets para el {fecha_sel}.")
-                    st.rerun()
 
 # --- PESTAÑA 2: HISTORIAL Y FILTROS ---
 with pestaña2:
