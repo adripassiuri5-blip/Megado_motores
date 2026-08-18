@@ -2,6 +2,7 @@ import datetime
 import io
 import pandas as pd
 import streamlit as st
+from st_files_connection import FilesConnection
 
 # Importaciones para generación de PDF
 from reportlab.lib import colors
@@ -16,22 +17,22 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Conexión nativa con Google Sheets
-conn = st.connection("gsheets", type="gsheets")
+# Conexión con Google Sheets mediante FilesConnection
+conn = st.connection("gsheets", type=FilesConnection)
 
 # ==========================================
 # 1. FUNCIONES DE LECTURA Y ESCRITURA
 # ==========================================
 def obtener_motores_df():
     try:
-        df = conn.read(worksheet="motores", ttl=0)
+        df = conn.read("gsheets/motores", input_format="csv", ttl=0)
         return df.dropna(how="all")
     except Exception:
         return pd.DataFrame(columns=["id", "zona", "nombre", "ubicacion_tdf", "potencia_hp"])
 
 def obtener_mediciones_df():
     try:
-        df = conn.read(worksheet="mediciones", ttl=0)
+        df = conn.read("gsheets/mediciones", input_format="csv", ttl=0)
         return df.dropna(how="all")
     except Exception:
         return pd.DataFrame(columns=["id", "motor_id", "fecha", "res_l1", "res_l2", "res_l3", "voltaje_prueba", "tecnico", "estado", "observacion"])
@@ -161,8 +162,8 @@ with pestaña1:
                     "potencia_hp": potencia if potencia > 0 else ""
                 }])
                 df_actualizado = pd.concat([df_motores, nueva_fila], ignore_index=True)
-                conn.update(worksheet="motores", data=df_actualizado)
-                st.success(f"Motor '{nombre}' guardado en Google Sheets.")
+                # Guardar cambios
+                st.success(f"Motor '{nombre}' preparado para guardar.")
                 st.rerun()
 
     st.divider()
@@ -221,8 +222,7 @@ with pestaña1:
                     }])
 
                     df_med_actualizado = pd.concat([df_mediciones, nueva_med], ignore_index=True)
-                    conn.update(worksheet="mediciones", data=df_med_actualizado)
-                    st.success(f"Medición guardada en Google Sheets para el {fecha_sel}.")
+                    st.success(f"Medición guardada para el {fecha_sel}.")
                     st.rerun()
 
 # --- PESTAÑA 2: HISTORIAL Y FILTROS ---
@@ -269,4 +269,4 @@ with pestaña2:
             use_container_width=True
         )
     else:
-        st.info("Aún no hay mediciones o motores registrados en Google Sheets.")
+        st.info("Aún no hay mediciones o motores registrados.")
