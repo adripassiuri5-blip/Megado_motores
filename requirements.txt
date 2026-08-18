@@ -1,5 +1,4 @@
 streamlit
 pandas
 reportlab
-st-files-connection
-google-sheets-st-connection
+gspread
