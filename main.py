@@ -2,7 +2,7 @@ import datetime
 import io
 import pandas as pd
 import streamlit as st
-from st_files_connection import FilesConnection
+from streamlit_gsheets import GSheetsConnection
 
 # Importaciones para generación de PDF
 from reportlab.lib import colors
@@ -17,22 +17,22 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Conexión con Google Sheets mediante FilesConnection
-conn = st.connection("gsheets", type=FilesConnection)
+# Conexión con Google Sheets
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 # ==========================================
 # 1. FUNCIONES DE LECTURA Y ESCRITURA
 # ==========================================
 def obtener_motores_df():
     try:
-        df = conn.read("gsheets/motores", input_format="csv", ttl=0)
+        df = conn.read(worksheet="motores", ttl=0)
         return df.dropna(how="all")
     except Exception:
         return pd.DataFrame(columns=["id", "zona", "nombre", "ubicacion_tdf", "potencia_hp"])
 
 def obtener_mediciones_df():
     try:
-        df = conn.read("gsheets/mediciones", input_format="csv", ttl=0)
+        df = conn.read(worksheet="mediciones", ttl=0)
         return df.dropna(how="all")
     except Exception:
         return pd.DataFrame(columns=["id", "motor_id", "fecha", "res_l1", "res_l2", "res_l3", "voltaje_prueba", "tecnico", "estado", "observacion"])
@@ -118,6 +118,7 @@ def generar_pdf_bytes(df_mediciones, anio_filtro, semestre_filtro):
     buffer.seek(0)
     return buffer
 
+# Lista estática de técnicos
 LISTA_TECNICOS = [
     "ADRIANA PASSIURI",
     "ANTONY LIRA",
@@ -129,7 +130,7 @@ LISTA_TECNICOS = [
 # ==========================================
 # 2. INTERFAZ EN STREAMLIT
 # ==========================================
-st.title("⚡ Sistema de Control de Megado de Motores")
+st.title("⚡ Sistema de Control de Megado de Motores (Google Sheets)")
 
 pestaña1, pestaña2 = st.tabs(["📝 Registrar Datos", "📊 Historial de Mediciones"])
 
@@ -162,8 +163,8 @@ with pestaña1:
                     "potencia_hp": potencia if potencia > 0 else ""
                 }])
                 df_actualizado = pd.concat([df_motores, nueva_fila], ignore_index=True)
-                # Guardar cambios
-                st.success(f"Motor '{nombre}' preparado para guardar.")
+                conn.update(worksheet="motores", data=df_actualizado)
+                st.success(f"Motor '{nombre}' guardado en Google Sheets.")
                 st.rerun()
 
     st.divider()
@@ -222,7 +223,8 @@ with pestaña1:
                     }])
 
                     df_med_actualizado = pd.concat([df_mediciones, nueva_med], ignore_index=True)
-                    st.success(f"Medición guardada para el {fecha_sel}.")
+                    conn.update(worksheet="mediciones", data=df_med_actualizado)
+                    st.success(f"Medición guardada en Google Sheets para el {fecha_sel}.")
                     st.rerun()
 
 # --- PESTAÑA 2: HISTORIAL Y FILTROS ---
@@ -230,6 +232,7 @@ with pestaña2:
     st.header("Historial y Filtros para Auditoría")
 
     if not df_mediciones.empty and not df_motores.empty:
+        # Cruce de datos (JOIN)
         df_completo = df_mediciones.merge(df_motores, left_on="motor_id", right_on="id", suffixes=('', '_motor'))
         
         df_completo['fecha_dt'] = pd.to_datetime(df_completo['fecha'], errors='coerce')
@@ -269,4 +272,4 @@ with pestaña2:
             use_container_width=True
         )
     else:
-        st.info("Aún no hay mediciones o motores registrados.")
+        st.info("Aún no hay mediciones o motores registrados en Google Sheets.")
